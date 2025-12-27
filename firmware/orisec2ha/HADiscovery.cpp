@@ -39,6 +39,7 @@ void publishDiscoverySensor(const String& objectId, const String& name, const St
   payload += "\"unique_id\":\"" + jsonEscape(settings.deviceId + "_" + objectId) + "\",";
   payload += "\"state_topic\":\"" + jsonEscape(stateTopicStr) + "\",";
   payload += "\"availability_topic\":\"" + String(AVAIL_TOPIC) + "\",";
+  payload += "\"suggested_display_precision\":1,";
   if (icon.length()) payload += "\"icon\":\"" + jsonEscape(icon) + "\",";
   if (unit.length()) payload += "\"unit_of_measurement\":\"" + jsonEscape(unit) + "\",";
   if (deviceClass.length()) payload += "\"device_class\":\"" + jsonEscape(deviceClass) + "\",";
@@ -95,7 +96,7 @@ void publishDiscoveryAlarmPanel(int p, const String& name) {
   payload += "\"payload_arm_custom_bypass\":\"ARM_CUSTOM_BYPASS\",";
   payload += "\"payload_disarm\":\"DISARM\",";
 
-  if (haveCode) {
+  if (haveCode && requireCode) {
     payload += "\"code\":\"" + jsonEscape(settings.haAlarmCode) + "\",";
   }
   payload += String("\"code_arm_required\":") + (requireCode ? "true" : "false") + ",";
@@ -114,9 +115,9 @@ void publishDiscoveryAlarmPanel(int p, const String& name) {
 }
 
 void publishCoreDiscovery() {
-  publishDiscoverySensor("volt_0", "Panel Voltage 0", topic("voltage/0"), "mdi:flash", "V", "voltage");
-  publishDiscoverySensor("volt_1", "Panel Voltage 1", topic("voltage/1"), "mdi:car-battery", "V", "voltage");
-  publishDiscoverySensor("volt_2", "Panel Voltage 2", topic("voltage/2"), "mdi:car-battery", "V", "voltage");
+  publishDiscoverySensor("volt_0", "Panel Battery", topic("voltage/0"), "mdi:car-battery", "V", "voltage");
+  publishDiscoverySensor("volt_1", "Panel Output 1", topic("voltage/1"), "mdi:flash", "V", "voltage");
+  publishDiscoverySensor("volt_2", "Panel Output 2", topic("voltage/2"), "mdi:flash", "V", "voltage");
 
   publishDiscoveryButton("relearn", "Relearn zones/areas", CMD_RELEARN_TOPIC, "mdi:refresh");
   publishDiscoveryButton("restart", "Restart module", CMD_RESTART_TOPIC, "mdi:restart");

@@ -51,7 +51,7 @@ static String pageHeader(const String& title) {
        ".check span{white-space:normal;word-break:break-word;flex:1;min-width:0}"
        ".pre{max-height:420px;overflow:auto;background:#0b1220;border:1px solid #1f2a44;border-radius:10px;padding:12px;font-size:12px;line-height:1.35}"
        "</style></head><body><div class='wrap'>";
-  h += "<h2 style='margin:6px 0 8px 0'>Orisec2MQTT Setup</h2>";
+  h += "<h2 style='margin:6px 0 8px 0'>OrisecConnect / Orisec2HA Setup</h2>";
   h += "<div class='muted'>AP expires after 5 minutes.</code></div>";
   h += "<div class='muted nav'>"
        "Pages: "
@@ -60,255 +60,278 @@ static String pageHeader(const String& title) {
        "<a href='/mqtt'>MQTT</a> · "
        "<a href='/sec'>Security</a> · "
        "<a href='/ota'>OTA</a> · "
-       "<a href='/logs'>Logs</a> · "
-       "<a href='/status'>Status</a>"
+       "<a href='/logs'>Logs</a>"
        "</div>";
   return h;
 }
 
 static String pageFooter() { return "</div></body></html>"; }
 
+static void beginHtml(const String& title) {
+  web.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  web.send(200, "text/html", "");
+  web.sendContent(pageHeader(title));
+}
+
+static void endHtml() {
+  web.sendContent(pageFooter());
+}
+
+
 // ----------------------------- pages -----------------------------
 
 static void handleHome() {
-  String p = pageHeader("Home");
-  p += "<div class='card'>"
-       "<h3 style='margin:0 0 6px 0'>Homepage</h3>"
-       "<div class='muted'>Choose a page to configure the bridge.</div>"
-       "<div class='buttons' style='margin-top:12px'>"
-       "<a href='/wifi'><button class='btn'>WiFi</button></a>"
-       "<a href='/mqtt'><button class='btn'>MQTT</button></a>"
-       "<a href='/sec'><button class='btn'>Security</button></a>"
-       "<a href='/ota'><button class='btn'>OTA</button></a>"
-       "<a href='/logs'><button class='btn secondary'>Logs</button></a>"
-       "</div>"
-       "</div>";
-  p += pageFooter();
-  web.send(200, "text/html", p);
+  beginHtml("Home");
+  web.sendContent("<div class='card'>"
+                  "<h3 style='margin:0 0 6px 0'>Homepage</h3>"
+                  "<div class='muted'>Choose a page to configure the bridge.</div>"
+                  "<div class='buttons' style='margin-top:12px'>"
+                  "<a href='/wifi'><button class='btn'>WiFi</button></a>"
+                  "<a href='/mqtt'><button class='btn'>MQTT</button></a>"
+                  "<a href='/sec'><button class='btn'>Security</button></a>"
+                  "<a href='/ota'><button class='btn'>OTA</button></a>"
+                  "<a href='/logs'><button class='btn secondary'>Logs</button></a>"
+                  "</div>"
+                  "</div>");
+  endHtml();
 }
 
-static void handleStatus() {
-  String p = pageHeader("Status");
-  p += "<div class='card'><h3 style='margin:0 0 6px 0'>Status</h3>"
-       "<div class='muted'>Basic runtime info (kept for troubleshooting).</div>"
-       "<hr style='border:0;border-top:1px solid #1f2a44;margin:12px 0'>";
-  p += "<div>Chip: <code>" + String(ESP.getChipId(), HEX) + "</code></div>";
-  p += "<div>WiFi STA: <code>" + String((WiFi.status() == WL_CONNECTED) ? "connected" : "disconnected") + "</code></div>";
-  p += "<div>MQTT: <code>" + String(mqtt.connected() ? "connected" : "disconnected") + "</code></div>";
-  p += "<div>TX locked: <code>" + String(txLocked ? "YES" : "no") + "</code></div>";
-  p += "<div>IDE OTA enabled: <code>" + String(settings.enableIdeOta ? "YES" : "no") + "</code></div>";
-  p += "</div>";
-  p += pageFooter();
-  web.send(200, "text/html", p);
-}
 
 static void handleWiFiPage() {
-  String p = pageHeader("WiFi");
-  p += "<div class='card'><h3 style='margin:0 0 6px 0'>WiFi</h3>"
-       "<div class='muted'>Set WiFi SSID and password.</div>"
-       "<div class='row'>"
-         "<div class='field'><label for='ssid'>SSID</label>"
-           "<input id='ssid' value='" + htmlEscape(settings.wifiSsid) + "'></div>"
-         "<div class='field'><label for='pass'>Password (leave blank to keep)</label>"
-           "<input type='password' id='pass' placeholder='Leave blank to keep existing'></div>"
-       "</div>"
-       "<div class='buttons'>"
-         "<button id='saveBtn' class='btn' onclick='save(false)'>Save</button>"
-         "<button id='applyBtn' class='btn secondary' onclick='save(true)'>Apply &amp; Reboot</button>"
-       "</div>"
-       "<div class='muted' id='msg' style='margin-top:10px'></div>";
+  beginHtml("WiFi");
+  web.sendContent("<div class='card'><h3 style='margin:0 0 6px 0'>WiFi</h3>"
+                  "<div class='muted'>Set WiFi SSID and password.</div>"
+                  "<div class='row'>"
+                  "<div class='field'><label for='ssid'>SSID</label>"
+                  "<input id='ssid' value='");
+  web.sendContent(htmlEscape(settings.wifiSsid));
+  web.sendContent("'></div>"
+                  "<div class='field'><label for='pass'>Password (leave blank to keep)</label>"
+                  "<input type='password' id='pass' placeholder='Leave blank to keep existing'></div>"
+                  "</div>"
+                  "<div class='buttons'>"
+                  "<button id='saveBtn' class='btn' onclick='save(false)'>Save</button>"
+                  "<button id='applyBtn' class='btn secondary' onclick='save(true)'>Apply &amp; Reboot</button>"
+                  "</div>"
+                  "<div class='muted' id='msg' style='margin-top:10px'></div>");
 
-  p += "<script>\n"
-       "async function save(reboot){\n"
-       "  const saveBtn=document.getElementById('saveBtn');\n"
-       "  const applyBtn=document.getElementById('applyBtn');\n"
-       "  saveBtn.disabled=true; applyBtn.disabled=true;\n"
-       "  document.getElementById('msg').textContent='Saving...';\n"
-       "  try{\n"
-       "    let fd=new FormData();\n"
-       "    fd.append('wifiSsid', document.getElementById('ssid').value);\n"
-       "    fd.append('wifiPass', document.getElementById('pass').value);\n"
-       "    if(reboot) fd.append('reboot','1');\n"
-       "    let r=await fetch('/save_wifi',{method:'POST',body:fd});\n"
-       "    let t=await r.text();\n"
-       "    alert(t);\n"
-       "    document.getElementById('msg').textContent=t;\n"
-       "    if(reboot) setTimeout(()=>location.href='/', 1500);\n"
-       "  }catch(e){ alert('Save failed'); }\n"
-       "  saveBtn.disabled=false; applyBtn.disabled=false;\n"
-       "}\n"
-       "</script>";
+  web.sendContent("<script>\n"
+                  "async function save(reboot){\n"
+                  "  const saveBtn=document.getElementById('saveBtn');\n"
+                  "  const applyBtn=document.getElementById('applyBtn');\n"
+                  "  saveBtn.disabled=true; applyBtn.disabled=true;\n"
+                  "  document.getElementById('msg').textContent='Saving...';\n"
+                  "  try{\n"
+                  "    let fd=new FormData();\n"
+                  "    fd.append('wifiSsid', document.getElementById('ssid').value);\n"
+                  "    fd.append('wifiPass', document.getElementById('pass').value);\n"
+                  "    if(reboot) fd.append('reboot','1');\n"
+                  "    let r=await fetch('/save_wifi',{method:'POST',body:fd});\n"
+                  "    let t=await r.text();\n"
+                  "    alert(t);\n"
+                  "    document.getElementById('msg').textContent=t;\n"
+                  "    if(reboot) setTimeout(()=>location.href='/', 1500);\n"
+                  "  }catch(e){ alert('Save failed'); }\n"
+                  "  saveBtn.disabled=false; applyBtn.disabled=false;\n"
+                  "}\n"
+                  "</script>");
 
-  p += "</div>" + pageFooter();
-  web.send(200, "text/html", p);
+  web.sendContent("</div>");
+  endHtml();
 }
+
 
 static void handleMqttPage() {
-  String p = pageHeader("MQTT");
-  p += "<div class='card'><h3 style='margin:0 0 6px 0'>MQTT</h3>"
-       "<div class='muted'>Broker settings.</div>"
-       "<div class='row'>"
-         "<div class='field'><label for='host'>Host / IP</label>"
-           "<input id='host' value='" + htmlEscape(settings.mqttHost) + "'></div>"
-         "<div class='field'><label for='port'>Port</label>"
-           "<input id='port' value='" + String(settings.mqttPort) + "'></div>"
-       "</div>"
-       "<div class='row'>"
-         "<div class='field'><label for='user'>Username</label>"
-           "<input id='user' value='" + htmlEscape(settings.mqttUser) + "'></div>"
-         "<div class='field'><label for='pass'>Password (leave blank to keep)</label>"
-           "<input type='password' id='pass' placeholder='Leave blank to keep existing'></div>"
-       "</div>"
-       "<div class='buttons'>"
-         "<button id='saveBtn' class='btn' onclick='save(false)'>Save</button>"
-         "<button id='applyBtn' class='btn secondary' onclick='save(true)'>Apply &amp; Reboot</button>"
-       "</div>"
-       "<div class='muted' id='msg' style='margin-top:10px'></div>";
+  beginHtml("MQTT");
+  web.sendContent("<div class='card'><h3 style='margin:0 0 6px 0'>MQTT</h3>"
+                  "<div class='muted'>Broker settings.</div>"
+                  "<div class='row'>"
+                  "<div class='field'><label for='host'>Host / IP</label>"
+                  "<input id='host' value='");
+  web.sendContent(htmlEscape(settings.mqttHost));
+  web.sendContent("'></div>"
+                  "<div class='field'><label for='port'>Port</label>"
+                  "<input id='port' value='");
+  web.sendContent(String(settings.mqttPort));
+  web.sendContent("'></div>"
+                  "</div>"
+                  "<div class='row'>"
+                  "<div class='field'><label for='user'>Username</label>"
+                  "<input id='user' value='");
+  web.sendContent(htmlEscape(settings.mqttUser));
+  web.sendContent("'></div>"
+                  "<div class='field'><label for='pass'>Password (leave blank to keep)</label>"
+                  "<input type='password' id='pass' placeholder='Leave blank to keep existing'></div>"
+                  "</div>"
+                  "<div class='buttons'>"
+                  "<button id='saveBtn' class='btn' onclick='save(false)'>Save</button>"
+                  "<button id='applyBtn' class='btn secondary' onclick='save(true)'>Apply &amp; Reboot</button>"
+                  "</div>"
+                  "<div class='muted' id='msg' style='margin-top:10px'></div>");
 
-  p += "<script>\n"
-       "async function save(reboot){\n"
-       "  const saveBtn=document.getElementById('saveBtn');\n"
-       "  const applyBtn=document.getElementById('applyBtn');\n"
-       "  saveBtn.disabled=true; applyBtn.disabled=true;\n"
-       "  document.getElementById('msg').textContent='Saving...';\n"
-       "  try{\n"
-       "    let fd=new FormData();\n"
-       "    fd.append('mqttHost', document.getElementById('host').value);\n"
-       "    fd.append('mqttPort', document.getElementById('port').value);\n"
-       "    fd.append('mqttUser', document.getElementById('user').value);\n"
-       "    fd.append('mqttPass', document.getElementById('pass').value);\n"
-       "    if(reboot) fd.append('reboot','1');\n"
-       "    let r=await fetch('/save_mqtt',{method:'POST',body:fd});\n"
-       "    let t=await r.text();\n"
-       "    alert(t);\n"
-       "    document.getElementById('msg').textContent=t;\n"
-       "    if(reboot) setTimeout(()=>location.href='/', 1500);\n"
-       "  }catch(e){ alert('Save failed'); }\n"
-       "  saveBtn.disabled=false; applyBtn.disabled=false;\n"
-       "}\n"
-       "</script>";
+  web.sendContent("<script>\n"
+                  "async function save(reboot){\n"
+                  "  const saveBtn=document.getElementById('saveBtn');\n"
+                  "  const applyBtn=document.getElementById('applyBtn');\n"
+                  "  saveBtn.disabled=true; applyBtn.disabled=true;\n"
+                  "  document.getElementById('msg').textContent='Saving...';\n"
+                  "  try{\n"
+                  "    let fd=new FormData();\n"
+                  "    fd.append('mqttHost', document.getElementById('host').value);\n"
+                  "    fd.append('mqttPort', document.getElementById('port').value);\n"
+                  "    fd.append('mqttUser', document.getElementById('user').value);\n"
+                  "    fd.append('mqttPass', document.getElementById('pass').value);\n"
+                  "    if(reboot) fd.append('reboot','1');\n"
+                  "    let r=await fetch('/save_mqtt',{method:'POST',body:fd});\n"
+                  "    let t=await r.text();\n"
+                  "    alert(t);\n"
+                  "    document.getElementById('msg').textContent=t;\n"
+                  "    if(reboot) setTimeout(()=>location.href='/', 1500);\n"
+                  "  }catch(e){ alert('Save failed'); }\n"
+                  "  saveBtn.disabled=false; applyBtn.disabled=false;\n"
+                  "}\n"
+                  "</script>");
 
-  p += "</div>" + pageFooter();
-  web.send(200, "text/html", p);
+  web.sendContent("</div>");
+  endHtml();
 }
+
 
 static void handleSecPage() {
-  String p = pageHeader("Security");
-  p += "<div class='card'><h3 style='margin:0 0 6px 0'>Security</h3>"
-       "<div class='muted'>Panel/HA codes and remote control toggles.</div>"
+  beginHtml("Security");
+  web.sendContent("<div class='card'><h3 style='margin:0 0 6px 0'>Security</h3>"
+                  "<div class='muted'>Panel/HA codes and remote control toggles.</div>"
+                  "<div class='row'>"
+                  "<div class='field'><label for='dn'>Device Name</label>"
+                  "<input id='dn' value='");
+  web.sendContent(htmlEscape(settings.deviceName));
+  web.sendContent("'></div>"
+                  "<div class='field'><label for='did'>Device ID</label>"
+                  "<input id='did' value='");
+  web.sendContent(htmlEscape(settings.deviceId));
+  web.sendContent("'></div>"
+                  "</div>"
+                  "<div class='row'>"
+                  "<div class='field'><label for='puc'>Panel User Code (leave blank to keep)</label>"
+                  "<input type='password' id='puc' placeholder='Leave blank to keep existing'></div>"
+                  "<div class='field'><label for='hac'>HA Alarm Code (leave blank to keep)</label>"
+                  "<input type='password' id='hac' placeholder='Leave blank to keep existing'></div>"
+                  "</div>");
 
-       "<div class='row'>"
-         "<div class='field'><label for='dn'>Device Name</label>"
-           "<input id='dn' value='" + htmlEscape(settings.deviceName) + "'></div>"
-         "<div class='field'><label for='did'>Device ID</label>"
-           "<input id='did' value='" + htmlEscape(settings.deviceId) + "'></div>"
-       "</div>"
+  web.sendContent("<label class='check'><input type='checkbox' id='ea' ");
+  if (settings.enableRemoteArming) web.sendContent("checked");
+  web.sendContent("><span>Enable remote arming</span></label>");
 
-       "<div class='row'>"
-         "<div class='field'><label for='puc'>Panel User Code (leave blank to keep)</label>"
-           "<input type='password' id='puc' placeholder='Leave blank to keep existing'></div>"
-         "<div class='field'><label for='hac'>HA Alarm Code (leave blank to keep)</label>"
-           "<input type='password' id='hac' placeholder='Leave blank to keep existing'></div>"
-       "</div>"
+  web.sendContent("<label class='check'><input type='checkbox' id='ed' ");
+  if (settings.enableRemoteDisarming) web.sendContent("checked");
+  web.sendContent("><span>Enable remote disarming</span></label>");
 
-       "<label class='check'><input type='checkbox' id='ea' " + String(settings.enableRemoteArming ? "checked" : "") + "><span>Enable remote arming</span></label>"
-       "<label class='check'><input type='checkbox' id='ed' " + String(settings.enableRemoteDisarming ? "checked" : "") + "><span>Enable remote disarming</span></label>"
-       "<label class='check'><input type='checkbox' id='hr' " + String(settings.requireHaCodeForArmDisarm ? "checked" : "") + "><span>Require HA code for arm/disarm actions</span></label>"
+  web.sendContent("<label class='check'><input type='checkbox' id='hr' ");
+  if (settings.requireHaCodeForArmDisarm) web.sendContent("checked");
+  web.sendContent("><span>Require HA code for arm/disarm actions</span></label>");
 
-       "<div class='buttons'>"
-         "<button id='saveBtn' class='btn' onclick='save(false)'>Save</button>"
-         "<button id='applyBtn' class='btn secondary' onclick='save(true)'>Apply &amp; Reboot</button>"
-       "</div>"
-       "<div class='muted' id='msg' style='margin-top:10px'></div>";
+  web.sendContent("<div class='buttons'>"
+                  "<button id='saveBtn' class='btn' onclick='save(false)'>Save</button>"
+                  "<button id='applyBtn' class='btn secondary' onclick='save(true)'>Apply &amp; Reboot</button>"
+                  "</div>"
+                  "<div class='muted' id='msg' style='margin-top:10px'></div>");
 
-  p += "<script>\n"
-       "async function save(reboot){\n"
-       "  const saveBtn=document.getElementById('saveBtn');\n"
-       "  const applyBtn=document.getElementById('applyBtn');\n"
-       "  saveBtn.disabled=true; applyBtn.disabled=true;\n"
-       "  document.getElementById('msg').textContent='Saving...';\n"
-       "  try{\n"
-       "    let fd=new FormData();\n"
-       "    fd.append('deviceName', document.getElementById('dn').value);\n"
-       "    fd.append('deviceId', document.getElementById('did').value);\n"
-       "    fd.append('panelUserCode', document.getElementById('puc').value);\n"
-       "    fd.append('haAlarmCode', document.getElementById('hac').value);\n"
-       "    fd.append('enableRemoteArming', document.getElementById('ea').checked?'1':'0');\n"
-       "    fd.append('enableRemoteDisarming', document.getElementById('ed').checked?'1':'0');\n"
-       "    fd.append('requireHaCodeForArmDisarm', document.getElementById('hr').checked?'1':'0');\n"
-       "    if(reboot) fd.append('reboot','1');\n"
-       "    let r=await fetch('/save_sec',{method:'POST',body:fd});\n"
-       "    let t=await r.text();\n"
-       "    alert(t);\n"
-       "    document.getElementById('msg').textContent=t;\n"
-       "    if(reboot) setTimeout(()=>location.href='/', 1500);\n"
-       "  }catch(e){ alert('Save failed'); }\n"
-       "  saveBtn.disabled=false; applyBtn.disabled=false;\n"
-       "}\n"
-       "</script>";
+  web.sendContent("<script>\n"
+                  "async function save(reboot){\n"
+                  "  const saveBtn=document.getElementById('saveBtn');\n"
+                  "  const applyBtn=document.getElementById('applyBtn');\n"
+                  "  saveBtn.disabled=true; applyBtn.disabled=true;\n"
+                  "  document.getElementById('msg').textContent='Saving...';\n"
+                  "  try{\n"
+                  "    let fd=new FormData();\n"
+                  "    fd.append('deviceName', document.getElementById('dn').value);\n"
+                  "    fd.append('deviceId', document.getElementById('did').value);\n"
+                  "    fd.append('panelUserCode', document.getElementById('puc').value);\n"
+                  "    fd.append('haAlarmCode', document.getElementById('hac').value);\n"
+                  "    fd.append('enableRemoteArming', document.getElementById('ea').checked?'1':'0');\n"
+                  "    fd.append('enableRemoteDisarming', document.getElementById('ed').checked?'1':'0');\n"
+                  "    fd.append('requireHaCodeForArmDisarm', document.getElementById('hr').checked?'1':'0');\n"
+                  "    if(reboot) fd.append('reboot','1');\n"
+                  "    let r=await fetch('/save_sec',{method:'POST',body:fd});\n"
+                  "    let t=await r.text();\n"
+                  "    alert(t);\n"
+                  "    document.getElementById('msg').textContent=t;\n"
+                  "    if(reboot) setTimeout(()=>location.href='/', 1500);\n"
+                  "  }catch(e){ alert('Save failed'); }\n"
+                  "  saveBtn.disabled=false; applyBtn.disabled=false;\n"
+                  "}\n"
+                  "</script>");
 
-  p += "</div>" + pageFooter();
-  web.send(200, "text/html", p);
+  web.sendContent("</div>");
+  endHtml();
 }
+
 
 static void handleOtaPage() {
-  String p = pageHeader("OTA");
-  p += "<div class='card'><h3 style='margin:0 0 6px 0'>OTA</h3>"
-       "<div class='muted'>Arduino IDE OTA toggle and password.</div>"
+  beginHtml("OTA");
+  web.sendContent("<div class='card'><h3 style='margin:0 0 6px 0'>OTA</h3>"
+                  "<div class='muted'>Arduino IDE OTA toggle and password.</div>");
 
-       "<label class='check'><input type='checkbox' id='ide' " + String(settings.enableIdeOta ? "checked" : "") + "><span>Enable Arduino IDE OTA</span></label>"
+  web.sendContent("<label class='check'><input type='checkbox' id='ide' ");
+  if (settings.enableIdeOta) web.sendContent("checked");
+  web.sendContent("><span>Enable Arduino IDE OTA</span></label>");
 
-       "<div class='field'><label for='op'>OTA Password (leave blank to keep)</label>"
-         "<input type='password' id='op' placeholder='Leave blank to keep existing'></div>"
+  web.sendContent("<div class='field'><label for='op'>OTA Password (leave blank to keep)</label>"
+                  "<input type='password' id='op' placeholder='Leave blank to keep existing'></div>"
+                  "<div class='buttons'>"
+                  "<button id='saveBtn' class='btn' onclick='save(false)'>Save</button>"
+                  "<button id='applyBtn' class='btn secondary' onclick='save(true)'>Apply &amp; Reboot</button>"
+                  "</div>"
+                  "<div class='muted' id='msg' style='margin-top:10px'></div>");
 
-       "<div class='buttons'>"
-         "<button id='saveBtn' class='btn' onclick='save(false)'>Save</button>"
-         "<button id='applyBtn' class='btn secondary' onclick='save(true)'>Apply &amp; Reboot</button>"
-       "</div>"
-       "<div class='muted' id='msg' style='margin-top:10px'></div>";
+  web.sendContent("<script>\n"
+                  "async function save(reboot){\n"
+                  "  const saveBtn=document.getElementById('saveBtn');\n"
+                  "  const applyBtn=document.getElementById('applyBtn');\n"
+                  "  saveBtn.disabled=true; applyBtn.disabled=true;\n"
+                  "  document.getElementById('msg').textContent='Saving...';\n"
+                  "  try{\n"
+                  "    let fd=new FormData();\n"
+                  "    fd.append('enableIdeOta', document.getElementById('ide').checked?'1':'0');\n"
+                  "    fd.append('otaPass', document.getElementById('op').value);\n"
+                  "    if(reboot) fd.append('reboot','1');\n"
+                  "    let r=await fetch('/save_ota',{method:'POST',body:fd});\n"
+                  "    let t=await r.text();\n"
+                  "    alert(t);\n"
+                  "    document.getElementById('msg').textContent=t;\n"
+                  "    if(reboot) setTimeout(()=>location.href='/', 1500);\n"
+                  "  }catch(e){ alert('Save failed'); }\n"
+                  "  saveBtn.disabled=false; applyBtn.disabled=false;\n"
+                  "}\n"
+                  "</script>");
 
-  p += "<script>\n"
-       "async function save(reboot){\n"
-       "  const saveBtn=document.getElementById('saveBtn');\n"
-       "  const applyBtn=document.getElementById('applyBtn');\n"
-       "  saveBtn.disabled=true; applyBtn.disabled=true;\n"
-       "  document.getElementById('msg').textContent='Saving...';\n"
-       "  try{\n"
-       "    let fd=new FormData();\n"
-       "    fd.append('enableIdeOta', document.getElementById('ide').checked?'1':'0');\n"
-       "    fd.append('otaPass', document.getElementById('op').value);\n"
-       "    if(reboot) fd.append('reboot','1');\n"
-       "    let r=await fetch('/save_ota',{method:'POST',body:fd});\n"
-       "    let t=await r.text();\n"
-       "    alert(t);\n"
-       "    document.getElementById('msg').textContent=t;\n"
-       "    if(reboot) setTimeout(()=>location.href='/', 1500);\n"
-       "  }catch(e){ alert('Save failed'); }\n"
-       "  saveBtn.disabled=false; applyBtn.disabled=false;\n"
-       "}\n"
-       "</script>";
-
-  p += "</div>" + pageFooter();
-  web.send(200, "text/html", p);
+  web.sendContent("</div>");
+  endHtml();
 }
+
 
 static void handleLogsPage() {
-  String p = pageHeader("Logs");
-  p += "<div class='card'><h3 style='margin:0 0 6px 0'>Device Log</h3>"
-       "<div class='muted'>Log buffer size: " + String(LOG_BUF_SZ - 1) + " bytes (RAM).</div>"
-       "<div class='buttons' style='margin-top:12px'>"
-         "<a href='/logs.txt'><button class='btn'>Download .txt</button></a>"
-       "</div>";
+  beginHtml("Logs");
+  web.sendContent("<div class='card'><h3 style='margin:0 0 6px 0'>Device Log</h3>"
+                  "<div class='muted'>Log buffer size: ");
+  web.sendContent(String(LOG_BUF_SZ - 1));
+  web.sendContent(" bytes (RAM).</div>"
+                  "<div class='buttons' style='margin-top:12px'>"
+                  "<a href='/logs.txt'><button class='btn'>Download .txt</button></a>"
+                  "</div>");
 
   if (logLen == 0 || logBuf[0] == 0) {
-    p += "<div class='muted' style='margin-top:12px'>No log entries yet.</div>";
+    web.sendContent("<div class='muted' style='margin-top:12px'>No log entries yet.</div>");
   } else {
-    p += "<pre class='pre'>" + htmlEscape(String(logBuf)) + "</pre>";
+    web.sendContent("<pre class='pre'>");
+    web.sendContent(htmlEscape(String(logBuf)));
+    web.sendContent("</pre>");
   }
 
-  p += "</div>" + pageFooter();
-  web.send(200, "text/html", p);
+  web.sendContent("</div>");
+  endHtml();
 }
+
 
 static void handleLogsDownload() {
   web.sendHeader("Content-Disposition", "attachment; filename=\"device-log.txt\"");
@@ -407,7 +430,6 @@ void startConfigPortal() {
 
   // Pages
   web.on("/", HTTP_GET, handleHome);
-  web.on("/status", HTTP_GET, handleStatus);
   web.on("/wifi", HTTP_GET, handleWiFiPage);
   web.on("/mqtt", HTTP_GET, handleMqttPage);
   web.on("/sec", HTTP_GET, handleSecPage);

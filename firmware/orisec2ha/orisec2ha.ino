@@ -13,7 +13,7 @@
 
 void setup() {
   Serial.begin(115200);
-  delay(200);
+  delay(1000);
 
   pinMode(CONFIG_BTN_PIN, INPUT_PULLUP);
   pinMode(FACTORY_BTN_PIN, INPUT_PULLUP);
@@ -21,7 +21,7 @@ void setup() {
   apPassword = makeApPassword();
 
   DBGLN("");
-  DBGLN("Orisec2HA Booting...");
+  DBGLN("Orisec2HA 0.1.0 Booting...");
   DBGLN("Wiring: Panel TX->D7, Panel RX<-D4, GND common");
   DBGLN(String("Config button: D5 (GPIO14) to GND (short press)"));
   DBGLN(String("Factory button: D6 (GPIO12) to GND (hold 10s)"));
