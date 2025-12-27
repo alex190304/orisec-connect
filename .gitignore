@@ -1,0 +1,53 @@
+############################
+# General
+############################
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.bak
+*.log
+
+############################
+# Secrets / local config
+############################
+.env
+.env.*
+
+############################
+# PlatformIO / ESP32
+############################
+.pio/
+.vscode/
+platformio.ini.backup
+
+# Arduino build artifacts (if ever used)
+build/
+*.elf
+*.bin
+*.map
+
+############################
+# KiCad
+############################
+**/fp-info-cache
+**/sym-lib-table
+**/fp-lib-table
+
+# Backup & autosave files
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.kicad_prl
+*.kicad_pro~
+_autosave-*
+
+# Generated outputs (keep if you want!)
+**/gerbers/
+**/drill/
+**/*.zip
+
+############################
+# OS / tooling
+############################
+.idea/
+*.code-workspace
