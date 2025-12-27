@@ -112,11 +112,13 @@ This repository contains multiple components under different licenses:
 - **Documentation (`docs/`)**  
   Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)
 
+[See LICENSE.md for more info.](LICENSE.md)
+
 ---
 
 ## Disclaimer
 
-Orisec is a registered trademark of Orisec Ltd. This project is not affiliated with Orisec at all, although they are aware of the existence and have provided their blessing for it to be made public.
+Orisec is a registered trademark of Orisec Ltd.
 
 This project is not affiliated with, endorsed by, or supported by Orisec Ltd.  
-It is an independent, community-driven open-source project.
+It is an independent, community-driven open-source project. Do not contact Orisec for support with this integration or hardware.
