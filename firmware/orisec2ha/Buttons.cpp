@@ -1,6 +1,11 @@
 #include "Buttons.h"
 #include "ConfigStore.h"
 
+static bool lastConfigBtn = false;
+static uint32_t lastConfigBtnChange = 0;
+static bool buttonDown = false;
+static uint32_t buttonDownSince = 0;
+static bool longPressHandled = false;
 static bool shortPressPending = false;
 
 bool configButtonPressedEvent() {
@@ -10,28 +15,42 @@ bool configButtonPressedEvent() {
 }
 
 void factoryButtonLoop() {
-  static bool lastReading = true;
-  static bool stableState = true;
-  static uint32_t lastReadingChange = 0;
-  static uint32_t buttonDownSince = 0;
+  bool down = (digitalRead(CONFIG_BTN_PIN) == LOW);
   uint32_t now = millis();
-  bool reading = (digitalRead(CONFIG_BTN_PIN) == LOW);
-
-  if (reading != lastReading) {
-    lastReading = reading;
-    lastReadingChange = now;
-  }
-
-  if ((now - lastReadingChange) > BTN_DEBOUNCE_MS && stableState != lastReading) {
-    stableState = lastReading;
-    if (stableState) {
+  if (down != lastConfigBtn && (now - lastConfigBtnChange) > BTN_DEBOUNCE_MS) {
+    lastConfigBtnChange = now;
+    lastConfigBtn = down;
+    if (down) {
+      buttonDown = true;
       buttonDownSince = now;
+      longPressHandled = false;
     } else {
-      if (buttonDownSince && (now - buttonDownSince) < FACTORY_HOLD_MS) {
+      if (buttonDown && !longPressHandled && buttonDownSince && (now - buttonDownSince) < FACTORY_HOLD_MS) {
         shortPressPending = true;
       }
+      buttonDown = false;
       buttonDownSince = 0;
+      longPressHandled = false;
     }
+    buttonDownSince = 0;
+  }
+
+  if (buttonDown && buttonDownSince && (now - buttonDownSince) >= FACTORY_HOLD_MS) {
+    buttonDown = false;
+    buttonDownSince = 0;
+    shortPressPending = false;
+    factoryReset();
+  }
+
+  if (buttonDown && !longPressHandled && buttonDownSince && (now - buttonDownSince) >= FACTORY_HOLD_MS) {
+    longPressHandled = true;
+    factoryReset();
+  }
+
+  if (stableState && buttonDownSince && (now - buttonDownSince) >= FACTORY_HOLD_MS) {
+    buttonDownSince = 0;
+    shortPressPending = false;
+    factoryReset();
   }
 
   if (stableState && buttonDownSince && (now - buttonDownSince) >= FACTORY_HOLD_MS) {
