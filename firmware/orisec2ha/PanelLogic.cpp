@@ -16,7 +16,7 @@ void probePanelVersionAndSerial() {
 
   if (requestWithRetry("GETSERIAL", "GETSERIAL:", 1200)) {
     parseGETSERIAL();
-    DBGLN(String("Panel serial=") + panelSerial);
+    DBGLN(String("Panel serial=") + panelSerialStr);
   } else DBGLN("GETSERIAL failed");
 }
 
