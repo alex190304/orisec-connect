@@ -2,10 +2,48 @@
 #include "Log.h"
 #include "OrisecUtil.h"
 #include "PanelLogic.h"
+#include <SPI.h>
 #include <ArduinoOTA.h>
 
 static bool wifiConfigured() { return settings.wifiSsid.length() > 0; }
 static bool mqttConfigured() { return settings.mqttHost.length() > 0 && settings.mqttPort > 0; }
+static bool ethernetConfigured() { return settings.useEthernet; }
+static bool ethernetReady = false;
+
+static void selectMqttClient(Client* client) {
+  if (client && netClient != client) {
+    netClient = client;
+    mqtt.setClient(*netClient);
+  }
+}
+
+static void ethernetEnsure() {
+  if (configModeActive) return;
+  if (!ethernetConfigured()) return;
+  if (ethernetReady) {
+    if (Ethernet.linkStatus() == LinkON) return;
+  }
+
+  DBGLN("Starting Ethernet (W5500)...");
+  SPI.begin(ETH_SCK_PIN, ETH_MISO_PIN, ETH_MOSI_PIN, ETH_CS_PIN);
+  Ethernet.init(ETH_CS_PIN);
+
+  uint64_t chip = ESP.getEfuseMac();
+  byte mac[6] = {
+    (byte)(chip >> 40), (byte)(chip >> 32), (byte)(chip >> 24),
+    (byte)(chip >> 16), (byte)(chip >> 8), (byte)(chip)
+  };
+
+  if (Ethernet.begin(mac) == 0) {
+    DBGLN("Ethernet DHCP failed.");
+    ethernetReady = false;
+    return;
+  }
+
+  ethernetReady = true;
+  selectMqttClient(&ethClient);
+  DBGLN(String("Ethernet connected. IP=") + Ethernet.localIP().toString());
+}
 
 bool mqttPublishRetained(const String& t, const String& payload) {
   bool ok = mqtt.publish(t.c_str(), payload.c_str(), true);
@@ -24,6 +62,10 @@ bool mqttPublishRetainedIfChanged(String& cache, const String& t, const String& 
 
 void wifiEnsure() {
   if (configModeActive) return;
+  if (settings.useEthernet) {
+    ethernetEnsure();
+    return;
+  }
   if (!wifiConfigured()) return;
   if (WiFi.status() == WL_CONNECTED) return;
 
@@ -45,7 +87,13 @@ void wifiEnsure() {
 
 void mqttEnsure() {
   if (configModeActive) return;
-  if (WiFi.status() != WL_CONNECTED) return;
+  if (settings.useEthernet) {
+    ethernetEnsure();
+    if (!ethernetReady || Ethernet.linkStatus() != LinkON) return;
+  } else {
+    if (WiFi.status() != WL_CONNECTED) return;
+    selectMqttClient(&wifiClient);
+  }
   if (!mqttConfigured()) return;
 
   mqtt.setServer(settings.mqttHost.c_str(), settings.mqttPort);
@@ -53,7 +101,7 @@ void mqttEnsure() {
   mqtt.setCallback(mqttCallback);
 
   while (!mqtt.connected()) {
-    String clientId = settings.deviceId + "_" + String(ESP.getChipId(), HEX);
+    String clientId = settings.deviceId + "_" + String(static_cast<uint32_t>(ESP.getEfuseMac()), HEX);
     DBGLN(String("Connecting MQTT to ") + settings.mqttHost + ":" + settings.mqttPort + " ...");
 
     bool ok = mqtt.connect(clientId.c_str(),
