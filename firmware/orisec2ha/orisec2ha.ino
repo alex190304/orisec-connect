@@ -10,28 +10,29 @@
 #include "PanelLogic.h"
 #include "PanelComm.h"
 #include "Ota.h"
+#include "Leds.h"
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
   pinMode(CONFIG_BTN_PIN, INPUT_PULLUP);
-  pinMode(FACTORY_BTN_PIN, INPUT_PULLUP);
+  initStatusLeds();
 
   apPassword = makeApPassword();
 
   DBGLN("");
   DBGLN("Orisec2HA 0.1.0 Booting...");
-  DBGLN("Wiring: Panel TX->D7, Panel RX<-D4, GND common");
-  DBGLN(String("Config button: D5 (GPIO14) to GND (short press)"));
-  DBGLN(String("Factory button: D6 (GPIO12) to GND (hold 10s)"));
+  DBGLN("Wiring: Panel TX->GPIO16, Panel RX<-GPIO17, GND common");
+  DBGLN(String("Config button: GPIO13 to GND (short press config, hold 10s factory)"));
+  DBGLN(String("Config mode output: GPIO25"));
+  DBGLN(String("Power/run output: GPIO26"));
   DBGLN(String("Setup AP SSID: Orisec2HA"));
   DBGLN(String("Setup AP PASS: ") + apPassword);
 
   loadSettings();
 
-  panelRx.begin(PANEL_BAUD);
-  Serial1.begin(PANEL_BAUD);
+  panelSerial.begin(PANEL_BAUD, SERIAL_8N1, PANEL_RX_PIN, PANEL_TX_PIN);
 
   initTables();
 
@@ -57,6 +58,7 @@ void loop() {
   if (configModeActive) {
     configPortalLoop();
     pollPanelRx(); // keep RX alive, TX blocked
+    updateStatusLeds();
     return;
   }
 
@@ -72,7 +74,11 @@ void loop() {
 
   if (doRelearn) { doRelearn=false; relearnAll(); }
 
-  if (txLocked) return;
+  if (txLocked) {
+    updateStatusLeds();
+    return;
+  }
 
   periodicPollLoop();
+  updateStatusLeds();
 }
