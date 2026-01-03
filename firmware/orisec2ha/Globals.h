@@ -1,10 +1,10 @@
 #pragma once
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
+#include <Ethernet.h>
 #include <PubSubClient.h>
-#include <SoftwareSerial.h>
 #include <DNSServer.h>
-#include <ESP8266WebServer.h>
+#include <WebServer.h>
 
 // ===================== SETTINGS (PERSISTENT) =====================
 struct Settings {
@@ -28,6 +28,8 @@ struct Settings {
 
   bool enableIdeOta = false;
   String otaPass;
+
+  bool useEthernet = true;
 };
 
 extern Settings settings;
@@ -40,8 +42,18 @@ extern const char* CFG_FILE;
 extern const int CONFIG_BTN_PIN;
 extern const uint32_t BTN_DEBOUNCE_MS;
 
-extern const int FACTORY_BTN_PIN;
 extern const uint32_t FACTORY_HOLD_MS;
+
+extern const int CONFIG_MODE_PIN;
+extern const int POWER_RUN_PIN;
+extern const int TX_LED_PIN;
+extern const int RX_LED_PIN;
+extern const int ETH_SCK_PIN;
+extern const int ETH_MISO_PIN;
+extern const int ETH_MOSI_PIN;
+extern const int ETH_CS_PIN;
+extern const int ETH_RST_PIN;
+extern const int ETH_INT_PIN;
 
 // ===================== PANEL / LIMITS / POLL =====================
 extern const uint32_t PANEL_BAUD;
@@ -57,8 +69,9 @@ extern const uint32_t ROPS_POLL_MS;
 extern const uint32_t GETSYS_POLL_MS;
 extern const uint32_t HEARTBEAT_MS;
 
+extern const int PANEL_TX_PIN;
 extern const int PANEL_RX_PIN;
-extern SoftwareSerial panelRx;
+extern HardwareSerial panelSerial;
 
 // UI
 extern const char* PARTITION_ICON;
@@ -67,7 +80,7 @@ extern const char* STAY3_NAME;
 // ===================== CAPTIVE PORTAL =====================
 extern bool configModeActive;
 extern DNSServer dnsServer;
-extern ESP8266WebServer web;
+extern WebServer web;
 extern IPAddress apIP;
 extern uint32_t portalStartMs;
 extern const uint32_t PORTAL_TIMEOUT_MS;
@@ -77,7 +90,9 @@ extern String apPassword;
 extern volatile bool txLocked;
 
 // ===================== MQTT =====================
-extern WiFiClient espClient;
+extern WiFiClient wifiClient;
+extern EthernetClient ethClient;
+extern Client* netClient;
 extern PubSubClient mqtt;
 extern const uint16_t MQTT_BUF_SZ;
 
@@ -87,6 +102,9 @@ extern const char* AVAIL_TOPIC;
 
 extern const char* CMD_RELEARN_TOPIC;
 extern const char* CMD_RESTART_TOPIC;
+
+// ===================== STATUS LEDS =====================
+extern volatile bool factoryResetActive;
 
 // ===================== ORISEC PROTOCOL =====================
 extern const uint8_t ORI_CR;
@@ -105,7 +123,7 @@ extern size_t lastFrameLen;
 // ===================== PANEL INFO =====================
 extern String panelModel;
 extern String panelVersion;
-extern String panelSerial;
+extern String panelSerialStr;
 extern int zoneLimit;
 
 // ===================== TABLES =====================

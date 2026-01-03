@@ -1,6 +1,7 @@
 #include "PanelComm.h"
 #include "Log.h"
 #include "OrisecUtil.h"
+#include "Leds.h"
 #include <ArduinoOTA.h>
 
 static void lockTxDueToInvalidCode() {
@@ -23,7 +24,8 @@ static void serial1WriteBytes(const uint8_t* data, size_t len) {
   for (size_t i=0;i<len;i++) { Serial.print("0x"); DBGHEX(data[i]); Serial.print(" "); }
   Serial.println();
 #endif
-  Serial1.write(data, len);
+  panelSerial.write(data, len);
+  pulseTxLed();
 }
 
 void panelSendChecked(const String& body, bool allowNoUserCode) {
@@ -104,8 +106,9 @@ static void handleIncomingFrame(const uint8_t* d, size_t n) {
 }
 
 void pollPanelRx() {
-  while (panelRx.available()) {
-    uint8_t b = (uint8_t)panelRx.read();
+  while (panelSerial.available()) {
+    uint8_t b = (uint8_t)panelSerial.read();
+    pulseRxLed();
     lastByteMs = millis();
     if (frameLen < sizeof(frameBuf)) frameBuf[frameLen++] = b;
     if (isTerm(b)) {
@@ -121,7 +124,7 @@ void pollPanelRx() {
 
 void drainPanel(uint32_t ms) {
   uint32_t start = millis();
-  while (millis() - start < ms) { pollPanelRx(); yield(); }
+  while (millis() - start < ms) { pollPanelRx(); updateStatusLeds(); yield(); }
 }
 
 bool waitForFramePrefix(const char* prefix, uint32_t timeoutMs) {
@@ -131,6 +134,7 @@ bool waitForFramePrefix(const char* prefix, uint32_t timeoutMs) {
     pollPanelRx();
     mqtt.loop();
     if (settings.enableIdeOta) ArduinoOTA.handle();
+    updateStatusLeds();
     yield();
     if (haveFrame) {
       haveFrame=false;

@@ -1,5 +1,6 @@
 #include "ConfigStore.h"
 #include "Log.h"
+#include "Leds.h"
 
 static String getKV(const String& line, String& keyOut) {
   int eq = line.indexOf('=');
@@ -17,11 +18,16 @@ static void setDefaultSettingsIfNeeded() {
   if (settings.mqttPort == 0) settings.mqttPort = 1883;
 }
 
+static bool ensureLittleFs() {
+  if (LittleFS.begin()) return true;
+  DBGLN("LittleFS mount failed, attempting format...");
+  if (LittleFS.begin(true)) return true;
+  DBGLN("LittleFS format failed.");
+  return false;
+}
+
 bool loadSettings() {
-  if (!LittleFS.begin()) {
-    DBGLN("LittleFS mount failed");
-    return false;
-  }
+  if (!ensureLittleFs()) return false;
   if (!LittleFS.exists(CFG_FILE)) {
     DBGLN("No config file found (defaults).");
     setDefaultSettingsIfNeeded();
@@ -63,6 +69,7 @@ bool loadSettings() {
     else if (k == "requireHaCodeForArmDisarm") settings.requireHaCodeForArmDisarm = (v == "1" || v == "true" || v == "on");
     else if (k == "enableIdeOta") settings.enableIdeOta = (v == "1" || v == "true" || v == "on");
     else if (k == "otaPass") settings.otaPass = v;
+    else if (k == "useEthernet") settings.useEthernet = (v == "1" || v == "true" || v == "on");
   }
   f.close();
 
@@ -72,7 +79,7 @@ bool loadSettings() {
 }
 
 bool saveSettings(const Settings& s) {
-  if (!LittleFS.begin()) return false;
+  if (!ensureLittleFs()) return false;
 
   File f = LittleFS.open(CFG_FILE, "w");
   if (!f) return false;
@@ -98,6 +105,7 @@ bool saveSettings(const Settings& s) {
 
   f.print("enableIdeOta="); f.println(s.enableIdeOta ? "1" : "0");
   f.print("otaPass="); f.println(s.otaPass);
+  f.print("useEthernet="); f.println(s.useEthernet ? "1" : "0");
 
   f.close();
   return true;
@@ -105,7 +113,8 @@ bool saveSettings(const Settings& s) {
 
 void factoryReset() {
   DBGLN("FACTORY RESET: deleting config and rebooting...");
-  if (LittleFS.begin()) {
+  setFactoryResetActive(true);
+  if (ensureLittleFs()) {
     if (LittleFS.exists(CFG_FILE)) LittleFS.remove(CFG_FILE);
   }
   delay(250);
