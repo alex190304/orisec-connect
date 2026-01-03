@@ -9,7 +9,6 @@ static bool wifiConfigured() { return settings.wifiSsid.length() > 0; }
 static bool mqttConfigured() { return settings.mqttHost.length() > 0 && settings.mqttPort > 0; }
 static bool ethernetConfigured() { return settings.useEthernet; }
 static bool ethernetReady = false;
-static uint32_t nextEthernetAttempt = 0;
 
 static void selectMqttClient(Client* client) {
   if (client && netClient != client) {
@@ -21,11 +20,9 @@ static void selectMqttClient(Client* client) {
 static void ethernetEnsure() {
   if (configModeActive) return;
   if (!ethernetConfigured()) return;
-  if (ethernetReady && Ethernet.linkStatus() == LinkON) return;
-
-  uint32_t now = millis();
-  if (now < nextEthernetAttempt) return;
-  nextEthernetAttempt = now + 5000;
+  if (ethernetReady) {
+    if (Ethernet.linkStatus() == LinkON) return;
+  }
 
   DBGLN("Starting Ethernet (W5500)...");
   SPI.begin(ETH_SCK_PIN, ETH_MISO_PIN, ETH_MOSI_PIN, ETH_CS_PIN);

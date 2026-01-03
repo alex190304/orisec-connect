@@ -44,7 +44,7 @@ static void updateHeartbeat(uint32_t now) {
   if (now >= nextHeartbeat) {
     heartbeatOn = !heartbeatOn;
     digitalWrite(POWER_RUN_PIN, heartbeatOn ? HIGH : LOW);
-    nextHeartbeat = now + (heartbeatOn ? 80 : 920);
+    nextHeartbeat = now + (heartbeatOn ? 120 : 880);
   }
 }
 
