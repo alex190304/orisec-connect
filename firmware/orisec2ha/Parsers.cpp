@@ -37,8 +37,8 @@ bool parseGETSERIAL() {
   String body;
   for (size_t i=10;i<usable;i++) body += (char)lastFrame[i];
   body.trim();
-  panelSerial = body;
-  return panelSerial.length() > 0;
+  panelSerialStr = body;
+  return panelSerialStr.length() > 0;
 }
 
 bool parseGETSYS(String& v0, String& v1, String& v2) {
