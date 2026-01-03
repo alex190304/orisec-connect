@@ -18,11 +18,16 @@ static void setDefaultSettingsIfNeeded() {
   if (settings.mqttPort == 0) settings.mqttPort = 1883;
 }
 
+static bool ensureLittleFs() {
+  if (LittleFS.begin()) return true;
+  DBGLN("LittleFS mount failed, attempting format...");
+  if (LittleFS.begin(true)) return true;
+  DBGLN("LittleFS format failed.");
+  return false;
+}
+
 bool loadSettings() {
-  if (!LittleFS.begin()) {
-    DBGLN("LittleFS mount failed");
-    return false;
-  }
+  if (!ensureLittleFs()) return false;
   if (!LittleFS.exists(CFG_FILE)) {
     DBGLN("No config file found (defaults).");
     setDefaultSettingsIfNeeded();
@@ -74,7 +79,7 @@ bool loadSettings() {
 }
 
 bool saveSettings(const Settings& s) {
-  if (!LittleFS.begin()) return false;
+  if (!ensureLittleFs()) return false;
 
   File f = LittleFS.open(CFG_FILE, "w");
   if (!f) return false;
