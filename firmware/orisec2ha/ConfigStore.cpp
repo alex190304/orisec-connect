@@ -1,5 +1,6 @@
 #include "ConfigStore.h"
 #include "Log.h"
+#include "Leds.h"
 
 static String getKV(const String& line, String& keyOut) {
   int eq = line.indexOf('=');
@@ -63,6 +64,7 @@ bool loadSettings() {
     else if (k == "requireHaCodeForArmDisarm") settings.requireHaCodeForArmDisarm = (v == "1" || v == "true" || v == "on");
     else if (k == "enableIdeOta") settings.enableIdeOta = (v == "1" || v == "true" || v == "on");
     else if (k == "otaPass") settings.otaPass = v;
+    else if (k == "useEthernet") settings.useEthernet = (v == "1" || v == "true" || v == "on");
   }
   f.close();
 
@@ -98,6 +100,7 @@ bool saveSettings(const Settings& s) {
 
   f.print("enableIdeOta="); f.println(s.enableIdeOta ? "1" : "0");
   f.print("otaPass="); f.println(s.otaPass);
+  f.print("useEthernet="); f.println(s.useEthernet ? "1" : "0");
 
   f.close();
   return true;
@@ -105,6 +108,7 @@ bool saveSettings(const Settings& s) {
 
 void factoryReset() {
   DBGLN("FACTORY RESET: deleting config and rebooting...");
+  setFactoryResetActive(true);
   if (LittleFS.begin()) {
     if (LittleFS.exists(CFG_FILE)) LittleFS.remove(CFG_FILE);
   }

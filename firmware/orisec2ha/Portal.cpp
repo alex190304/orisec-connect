@@ -100,7 +100,12 @@ static void handleHome() {
 static void handleWiFiPage() {
   beginHtml("WiFi");
   web.sendContent("<div class='card'><h3 style='margin:0 0 6px 0'>WiFi</h3>"
-                  "<div class='muted'>Set WiFi SSID and password.</div>"
+                  "<div class='muted'>Set WiFi SSID and password (used when Ethernet is disabled). Config portal always uses WiFi AP.</div>"
+                  "<div class='field' style='margin-top:10px'>"
+                  "<label><input type='checkbox' id='useEth' ");
+  web.sendContent(settings.useEthernet ? "checked" : "");
+  web.sendContent("> Use Ethernet (W5500) for MQTT</label>"
+                  "</div>"
                   "<div class='row'>"
                   "<div class='field'><label for='ssid'>SSID</label>"
                   "<input id='ssid' value='");
@@ -123,6 +128,7 @@ static void handleWiFiPage() {
                   "  document.getElementById('msg').textContent='Saving...';\n"
                   "  try{\n"
                   "    let fd=new FormData();\n"
+                  "    fd.append('useEthernet', document.getElementById('useEth').checked ? '1' : '0');\n"
                   "    fd.append('wifiSsid', document.getElementById('ssid').value);\n"
                   "    fd.append('wifiPass', document.getElementById('pass').value);\n"
                   "    if(reboot) fd.append('reboot','1');\n"
@@ -351,6 +357,7 @@ static void maybeRebootAfterSave() {
 
 static void handleSaveWifi() {
   Settings s = settings;
+  if (web.hasArg("useEthernet")) s.useEthernet = (web.arg("useEthernet") == "1");
   if (web.hasArg("wifiSsid")) s.wifiSsid = web.arg("wifiSsid");
   String wp = web.arg("wifiPass");
   if (wp.length()) s.wifiPass = wp;
@@ -414,6 +421,7 @@ void startConfigPortal() {
   if (configModeActive) return;
 
   configModeActive = true;
+  digitalWrite(CONFIG_MODE_PIN, HIGH);
   portalStartMs = millis();
   DBGLN("=== CONFIG PORTAL START ===");
 
@@ -458,6 +466,7 @@ void stopConfigPortal() {
   if (!configModeActive) return;
   DBGLN("=== CONFIG PORTAL STOP (timeout) ===");
   configModeActive = false;
+  digitalWrite(CONFIG_MODE_PIN, LOW);
 
   dnsServer.stop();
   web.stop();
@@ -477,7 +486,7 @@ void configPortalLoop() {
 }
 
 String makeApPassword() {
-  uint32_t id = ESP.getChipId();
+  uint32_t id = static_cast<uint32_t>(ESP.getEfuseMac());
   uint32_t mix = id ^ 0xA5C3F19D;
   char buf[13];
   snprintf(buf, sizeof(buf), "%08lX%04X", (unsigned long)mix, (unsigned int)((mix>>8) & 0xFFFF));
