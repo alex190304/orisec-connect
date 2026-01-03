@@ -1,35 +1,41 @@
 #include "Buttons.h"
 #include "ConfigStore.h"
 
-static bool lastConfigBtn = true;
+static bool lastConfigBtn = false;
 static uint32_t lastConfigBtnChange = 0;
+static bool buttonDown = false;
+static uint32_t buttonDownSince = 0;
+static bool longPressHandled = false;
+static bool shortPressPending = false;
 
 bool configButtonPressedEvent() {
-  bool cur = digitalRead(CONFIG_BTN_PIN); // HIGH idle, LOW pressed
-  uint32_t now = millis();
-  if (cur != lastConfigBtn && (now - lastConfigBtnChange) > BTN_DEBOUNCE_MS) {
-    lastConfigBtnChange = now;
-    lastConfigBtn = cur;
-    if (cur == LOW) return true;
-  }
-  return false;
+  if (!shortPressPending) return false;
+  shortPressPending = false;
+  return true;
 }
 
-static bool factoryBtnWasDown = false;
-static uint32_t factoryDownSince = 0;
-
 void factoryButtonLoop() {
-  bool down = (digitalRead(FACTORY_BTN_PIN) == LOW);
+  bool down = (digitalRead(CONFIG_BTN_PIN) == LOW);
   uint32_t now = millis();
-  if (down && !factoryBtnWasDown) {
-    factoryBtnWasDown = true;
-    factoryDownSince = now;
-  } else if (!down && factoryBtnWasDown) {
-    factoryBtnWasDown = false;
-    factoryDownSince = 0;
-  } else if (down && factoryBtnWasDown) {
-    if (factoryDownSince && (now - factoryDownSince) >= FACTORY_HOLD_MS) {
-      factoryReset();
+  if (down != lastConfigBtn && (now - lastConfigBtnChange) > BTN_DEBOUNCE_MS) {
+    lastConfigBtnChange = now;
+    lastConfigBtn = down;
+    if (down) {
+      buttonDown = true;
+      buttonDownSince = now;
+      longPressHandled = false;
+    } else {
+      if (buttonDown && !longPressHandled && buttonDownSince && (now - buttonDownSince) < FACTORY_HOLD_MS) {
+        shortPressPending = true;
+      }
+      buttonDown = false;
+      buttonDownSince = 0;
+      longPressHandled = false;
     }
+  }
+
+  if (buttonDown && !longPressHandled && buttonDownSince && (now - buttonDownSince) >= FACTORY_HOLD_MS) {
+    longPressHandled = true;
+    factoryReset();
   }
 }
