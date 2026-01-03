@@ -6,7 +6,6 @@
 
 #include <LittleFS.h>
 #include <ArduinoOTA.h>
-#include <Updater.h>
 
 // ----------------------------- helpers -----------------------------
 
