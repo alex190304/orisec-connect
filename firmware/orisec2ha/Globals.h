@@ -123,7 +123,7 @@ extern size_t lastFrameLen;
 // ===================== PANEL INFO =====================
 extern String panelModel;
 extern String panelVersion;
-extern String panelSerial;
+extern String panelSerialStr;
 extern int zoneLimit;
 
 // ===================== TABLES =====================

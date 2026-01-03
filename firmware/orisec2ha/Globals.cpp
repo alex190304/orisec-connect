@@ -85,7 +85,7 @@ size_t lastFrameLen = 0;
 // Panel info
 String panelModel   = "Unknown";
 String panelVersion = "";
-String panelSerial  = "";
+String panelSerialStr  = "";
 int zoneLimit = MAX_ZONES_HARD;
 
 // Tables
