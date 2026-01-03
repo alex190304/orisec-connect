@@ -8,7 +8,7 @@ String haDeviceBlock() {
 
   String payload = "\"device\":{";
   payload += "\"identifiers\":[\"" + settings.deviceId + "\"";
-  if (panelSerial.length()) payload += ",\"" + jsonEscape(panelSerial) + "\"";
+  if (panelSerialStr.length()) payload += ",\"" + jsonEscape(panelSerialStr) + "\"";
   payload += "],";
   payload += "\"name\":\"" + jsonEscape(settings.deviceName) + "\",";
   payload += "\"manufacturer\":\"Orisec\",";
