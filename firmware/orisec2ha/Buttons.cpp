@@ -52,4 +52,10 @@ void factoryButtonLoop() {
     shortPressPending = false;
     factoryReset();
   }
+
+  if (stableState && buttonDownSince && (now - buttonDownSince) >= FACTORY_HOLD_MS) {
+    buttonDownSince = 0;
+    shortPressPending = false;
+    factoryReset();
+  }
 }
