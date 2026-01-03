@@ -20,12 +20,12 @@ void initStatusLeds() {
 }
 
 void pulseTxLed() {
-  txLedUntil = millis() + 30;
+  txLedUntil = millis() + 50;
   digitalWrite(TX_LED_PIN, HIGH);
 }
 
 void pulseRxLed() {
-  rxLedUntil = millis() + 30;
+  rxLedUntil = millis() + 50;
   digitalWrite(RX_LED_PIN, HIGH);
 }
 
@@ -44,7 +44,7 @@ static void updateHeartbeat(uint32_t now) {
   if (now >= nextHeartbeat) {
     heartbeatOn = !heartbeatOn;
     digitalWrite(POWER_RUN_PIN, heartbeatOn ? HIGH : LOW);
-    nextHeartbeat = now + (heartbeatOn ? 100 : 900);
+    nextHeartbeat = now + (heartbeatOn ? 120 : 880);
   }
 }
 
