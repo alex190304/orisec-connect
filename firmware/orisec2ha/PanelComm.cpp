@@ -124,7 +124,7 @@ void pollPanelRx() {
 
 void drainPanel(uint32_t ms) {
   uint32_t start = millis();
-  while (millis() - start < ms) { pollPanelRx(); yield(); }
+  while (millis() - start < ms) { pollPanelRx(); updateStatusLeds(); yield(); }
 }
 
 bool waitForFramePrefix(const char* prefix, uint32_t timeoutMs) {
@@ -134,6 +134,7 @@ bool waitForFramePrefix(const char* prefix, uint32_t timeoutMs) {
     pollPanelRx();
     mqtt.loop();
     if (settings.enableIdeOta) ArduinoOTA.handle();
+    updateStatusLeds();
     yield();
     if (haveFrame) {
       haveFrame=false;

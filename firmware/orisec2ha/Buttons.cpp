@@ -32,6 +32,14 @@ void factoryButtonLoop() {
       buttonDownSince = 0;
       longPressHandled = false;
     }
+    buttonDownSince = 0;
+  }
+
+  if (buttonDown && buttonDownSince && (now - buttonDownSince) >= FACTORY_HOLD_MS) {
+    buttonDown = false;
+    buttonDownSince = 0;
+    shortPressPending = false;
+    factoryReset();
   }
 
   if (buttonDown && !longPressHandled && buttonDownSince && (now - buttonDownSince) >= FACTORY_HOLD_MS) {
