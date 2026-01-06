@@ -40,6 +40,7 @@ extern const char* CFG_FILE;
 
 // ===================== BUTTONS =====================
 extern const int CONFIG_BTN_PIN;
+extern const int FACTORY_BTN_PIN;
 extern const uint32_t BTN_DEBOUNCE_MS;
 
 extern const uint32_t FACTORY_HOLD_MS;
@@ -97,11 +98,11 @@ extern PubSubClient mqtt;
 extern const uint16_t MQTT_BUF_SZ;
 
 extern const char* DISCOVERY_PREFIX;
-extern const char* BASE_TOPIC;
-extern const char* AVAIL_TOPIC;
 
-extern const char* CMD_RELEARN_TOPIC;
-extern const char* CMD_RESTART_TOPIC;
+extern String BASE_TOPIC;
+extern String AVAIL_TOPIC;
+extern String CMD_RELEARN_TOPIC;
+extern String CMD_RESTART_TOPIC;
 
 // ===================== STATUS LEDS =====================
 extern volatile bool factoryResetActive;
@@ -151,3 +152,5 @@ extern volatile bool forceRopsSoon;
 extern uint32_t forceRopsAtMs;
 
 extern uint32_t nextGETZ, nextGETP, nextROPS, nextGETSYS;
+
+void initTopics();

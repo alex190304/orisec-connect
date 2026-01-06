@@ -10,11 +10,23 @@ static bool mqttConfigured() { return settings.mqttHost.length() > 0 && settings
 static bool ethernetConfigured() { return settings.useEthernet; }
 static bool ethernetReady = false;
 
+/**
+ * IMPORTANT:
+ * PubSubClient will crash (null deref / LoadProhibited EXCVADDR=0) if connect()
+ * is called before a valid underlying network Client is set.
+ *
+ * Previously we only called mqtt.setClient() when (netClient != client).
+ * If netClient wasn't guaranteed to start as nullptr (or was otherwise stale),
+ * that condition could incorrectly skip setting the client, leading to the crash
+ * you saw inside PubSubClient::connect().
+ */
 static void selectMqttClient(Client* client) {
-  if (client && netClient != client) {
-    netClient = client;
-    mqtt.setClient(*netClient);
-  }
+  if (!client) return;
+
+  // Always (re)apply the client to PubSubClient to avoid any chance of
+  // connect() running with a null/invalid internal client pointer.
+  netClient = client;
+  mqtt.setClient(*netClient);
 }
 
 static void ethernetEnsure() {
@@ -83,17 +95,29 @@ void wifiEnsure() {
   }
   DBGLN("");
   DBGLN(String("WiFi connected. IP=") + WiFi.localIP().toString());
+
+  // Ensure the PubSubClient is always wired to the WiFi client once connected.
+  selectMqttClient(&wifiClient);
 }
 
 void mqttEnsure() {
   if (configModeActive) return;
+
   if (settings.useEthernet) {
     ethernetEnsure();
     if (!ethernetReady || Ethernet.linkStatus() != LinkON) return;
+    // ethernetEnsure() selects ethClient when ready
   } else {
     if (WiFi.status() != WL_CONNECTED) return;
     selectMqttClient(&wifiClient);
   }
+
+  // Hard safety: never call PubSubClient::connect() without a client selected.
+  if (netClient == nullptr) {
+    DBGLN("MQTT skipped: netClient is null (no network client selected)");
+    return;
+  }
+
   if (!mqttConfigured()) return;
 
   mqtt.setServer(settings.mqttHost.c_str(), settings.mqttPort);
@@ -106,13 +130,13 @@ void mqttEnsure() {
 
     bool ok = mqtt.connect(clientId.c_str(),
                            settings.mqttUser.c_str(), settings.mqttPass.c_str(),
-                           AVAIL_TOPIC, 1, true, "offline");
+                           AVAIL_TOPIC.c_str(), 1, true, "offline");
     if (ok) {
       DBGLN("MQTT connected.");
-      mqttPublishRetained(AVAIL_TOPIC, "online");
+      mqttPublishRetained(AVAIL_TOPIC.c_str(), "online");
 
-      mqtt.subscribe(CMD_RELEARN_TOPIC);
-      mqtt.subscribe(CMD_RESTART_TOPIC);
+      mqtt.subscribe(CMD_RELEARN_TOPIC.c_str());
+      mqtt.subscribe(CMD_RESTART_TOPIC.c_str());
 
       for (int p=1;p<=MAX_PARTITIONS_HARD;p++) {
         mqtt.subscribe(topic("partition/" + String(p) + "/set").c_str());
@@ -134,7 +158,7 @@ void heartbeatLoop() {
   uint32_t now=millis();
   if ((int32_t)(now-nextHb) >= 0) {
     nextHb = now + HEARTBEAT_MS;
-    if (mqtt.connected()) mqttPublishRetained(AVAIL_TOPIC, "online");
+    if (mqtt.connected()) mqttPublishRetained(AVAIL_TOPIC.c_str(), "online");
   }
 }
 
@@ -144,8 +168,8 @@ void mqttCallback(char* tpc, byte* payload, unsigned int length) {
   for (unsigned int i=0;i<length;i++) msg += (char)payload[i];
   msg.trim();
 
-  if (tStr == CMD_RELEARN_TOPIC) { doRelearn = true; return; }
-  if (tStr == CMD_RESTART_TOPIC) { DBGLN("Restart requested -> restarting..."); delay(200); ESP.restart(); return; }
+  if (tStr == CMD_RELEARN_TOPIC.c_str()) { doRelearn = true; return; }
+  if (tStr == CMD_RESTART_TOPIC.c_str()) { DBGLN("Restart requested -> restarting..."); delay(200); ESP.restart(); return; }
 
   for (int p=1;p<=MAX_PARTITIONS_HARD;p++) {
     if (tStr == topic("partition/" + String(p) + "/reset")) { sendPanelReset(p); return; }

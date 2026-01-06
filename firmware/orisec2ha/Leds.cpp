@@ -1,79 +1,90 @@
 #include "Leds.h"
+#include "Log.h"
 #include "Globals.h"
+
+// If your LED is wired to 3V3->LED->resistor->GPIO (so GPIO sinks current),
+// or you're using an onboard LED that's active-low, set this to 1.
+#define CONFIG_LED_ACTIVE_LOW 0
 
 static uint32_t txLedUntil = 0;
 static uint32_t rxLedUntil = 0;
-static uint32_t nextHeartbeat = 0;
-static bool heartbeatOn = false;
-static uint32_t nextConfigFlash = 0;
-static bool configFlashOn = false;
+
+static bool lastConfigOut = false;
+static bool lastPowerOut  = false;
+static bool lastTxOut     = false;
+static bool lastRxOut     = false;
+
+static inline void writePinIfChanged(uint8_t pin, bool &last, bool level) {
+  if (last == level) return;
+  last = level;
+  digitalWrite(pin, level ? HIGH : LOW);
+}
 
 void initStatusLeds() {
   pinMode(TX_LED_PIN, OUTPUT);
   pinMode(RX_LED_PIN, OUTPUT);
   pinMode(CONFIG_MODE_PIN, OUTPUT);
   pinMode(POWER_RUN_PIN, OUTPUT);
+
+  // start off
   digitalWrite(TX_LED_PIN, LOW);
   digitalWrite(RX_LED_PIN, LOW);
   digitalWrite(CONFIG_MODE_PIN, LOW);
   digitalWrite(POWER_RUN_PIN, LOW);
+
+  lastTxOut = false;
+  lastRxOut = false;
+  lastConfigOut = false;
+  lastPowerOut = false;
 }
 
 void pulseTxLed() {
   txLedUntil = millis() + 50;
-  digitalWrite(TX_LED_PIN, HIGH);
+  writePinIfChanged(TX_LED_PIN, lastTxOut, true);
 }
 
 void pulseRxLed() {
   rxLedUntil = millis() + 50;
-  digitalWrite(RX_LED_PIN, HIGH);
+  writePinIfChanged(RX_LED_PIN, lastRxOut, true);
 }
 
-void setFactoryResetActive(bool active) {
-  factoryResetActive = active;
-  if (active) {
-    digitalWrite(POWER_RUN_PIN, HIGH);
-  }
-}
-
+// Simple heartbeat on POWER_RUN_PIN (optional)
+// If you want it solid ON always, just replace with writePinIfChanged(..., true)
 static void updateHeartbeat(uint32_t now) {
-  if (factoryResetActive) {
-    digitalWrite(POWER_RUN_PIN, HIGH);
-    return;
-  }
-  if (now >= nextHeartbeat) {
-    heartbeatOn = !heartbeatOn;
-    digitalWrite(POWER_RUN_PIN, heartbeatOn ? HIGH : LOW);
-    nextHeartbeat = now + (heartbeatOn ? 120 : 880);
-  }
+  // 100ms ON every 1s
+  bool hb = ((now % 1000) < 100);
+  writePinIfChanged(POWER_RUN_PIN, lastPowerOut, hb);
 }
 
 static void updateConfigLed(uint32_t now) {
-  if (configModeActive) {
-    if (now >= nextConfigFlash) {
-      configFlashOn = !configFlashOn;
-      digitalWrite(CONFIG_MODE_PIN, configFlashOn ? HIGH : LOW);
-      nextConfigFlash = now + 250;
-    }
-    return;
-  }
+  // Detect transitions into/out of config mode
+  bool desired;
 
-  configFlashOn = false;
-  digitalWrite(CONFIG_MODE_PIN, mqtt.connected() ? HIGH : LOW);
+  if (configModeActive) {
+    // 100ms ON every 1s
+    bool cm = ((now % 1000) < 100);
+    writePinIfChanged(CONFIG_MODE_PIN, lastConfigOut, cm); 
+    } else {
+    // solid reflect MQTT
+    desired = mqtt.connected();
+    writePinIfChanged(CONFIG_MODE_PIN, lastConfigOut, desired);
+  }
 }
+
 
 void updateStatusLeds() {
   uint32_t now = millis();
 
-  if (txLedUntil && now >= txLedUntil) {
+  // TX/RX pulse timeout
+  if (txLedUntil && (int32_t)(now - txLedUntil) >= 0) {
     txLedUntil = 0;
-    digitalWrite(TX_LED_PIN, LOW);
+    writePinIfChanged(TX_LED_PIN, lastTxOut, false);
   }
-  if (rxLedUntil && now >= rxLedUntil) {
+  if (rxLedUntil && (int32_t)(now - rxLedUntil) >= 0) {
     rxLedUntil = 0;
-    digitalWrite(RX_LED_PIN, LOW);
+    writePinIfChanged(RX_LED_PIN, lastRxOut, false);
   }
 
-  updateHeartbeat(now);
   updateConfigLed(now);
+  updateHeartbeat(now);
 }

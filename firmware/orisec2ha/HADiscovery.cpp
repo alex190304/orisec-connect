@@ -31,7 +31,7 @@ void publishDiscoveryButton(const String& objectId, const String& name, const St
   mqttPublishRetained(cfgTopic, payload);
 }
 
-void publishDiscoverySensor(const String& objectId, const String& name, const String& stateTopicStr,
+void publishDiscoveryNumericSensor(const String& objectId, const String& name, const String& stateTopicStr,
                             const String& icon, const String& unit, const String& deviceClass) {
   String cfgTopic = String(DISCOVERY_PREFIX) + "/sensor/" + settings.deviceId + "/" + objectId + "/config";
   String payload = "{";
@@ -40,6 +40,22 @@ void publishDiscoverySensor(const String& objectId, const String& name, const St
   payload += "\"state_topic\":\"" + jsonEscape(stateTopicStr) + "\",";
   payload += "\"availability_topic\":\"" + String(AVAIL_TOPIC) + "\",";
   payload += "\"suggested_display_precision\":1,";
+  if (icon.length()) payload += "\"icon\":\"" + jsonEscape(icon) + "\",";
+  if (unit.length()) payload += "\"unit_of_measurement\":\"" + jsonEscape(unit) + "\",";
+  if (deviceClass.length()) payload += "\"device_class\":\"" + jsonEscape(deviceClass) + "\",";
+  payload += haDeviceBlock();
+  payload += "}";
+  mqttPublishRetained(cfgTopic, payload);
+}
+
+void publishDiscoverySensor(const String& objectId, const String& name, const String& stateTopicStr,
+                            const String& icon, const String& unit, const String& deviceClass) {
+  String cfgTopic = String(DISCOVERY_PREFIX) + "/sensor/" + settings.deviceId + "/" + objectId + "/config";
+  String payload = "{";
+  payload += "\"name\":\"" + jsonEscape(name) + "\",";
+  payload += "\"unique_id\":\"" + jsonEscape(settings.deviceId + "_" + objectId) + "\",";
+  payload += "\"state_topic\":\"" + jsonEscape(stateTopicStr) + "\",";
+  payload += "\"availability_topic\":\"" + String(AVAIL_TOPIC) + "\",";
   if (icon.length()) payload += "\"icon\":\"" + jsonEscape(icon) + "\",";
   if (unit.length()) payload += "\"unit_of_measurement\":\"" + jsonEscape(unit) + "\",";
   if (deviceClass.length()) payload += "\"device_class\":\"" + jsonEscape(deviceClass) + "\",";
@@ -115,9 +131,9 @@ void publishDiscoveryAlarmPanel(int p, const String& name) {
 }
 
 void publishCoreDiscovery() {
-  publishDiscoverySensor("volt_0", "Panel Battery", topic("voltage/0"), "mdi:car-battery", "V", "voltage");
-  publishDiscoverySensor("volt_1", "Panel Output 1", topic("voltage/1"), "mdi:flash", "V", "voltage");
-  publishDiscoverySensor("volt_2", "Panel Output 2", topic("voltage/2"), "mdi:flash", "V", "voltage");
+  publishDiscoveryNumericSensor("volt_0", "Panel Battery", topic("voltage/0"), "mdi:car-battery", "V", "voltage");
+  publishDiscoveryNumericSensor("volt_1", "Panel Output 1", topic("voltage/1"), "mdi:flash", "V", "voltage");
+  publishDiscoveryNumericSensor("volt_2", "Panel Output 2", topic("voltage/2"), "mdi:flash", "V", "voltage");
 
   publishDiscoveryButton("relearn", "Relearn zones/areas", CMD_RELEARN_TOPIC, "mdi:refresh");
   publishDiscoveryButton("restart", "Restart module", CMD_RESTART_TOPIC, "mdi:restart");

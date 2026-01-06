@@ -56,4 +56,4 @@ String sanitizeForObjectId(String s) {
   return out;
 }
 
-String topic(const String& suffix) { return String(BASE_TOPIC) + "/" + suffix; }
+String topic(const String& suffix) { return BASE_TOPIC + "/" + suffix; }

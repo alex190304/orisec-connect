@@ -1,15 +1,16 @@
 #include "Globals.h"
 
 Settings settings;
-const char* CFG_FILE = "/config.txt";
+const char* CFG_FILE = "/settings.cfg";
 
 // Buttons
-const int CONFIG_BTN_PIN = 13;
+const int CONFIG_BTN_PIN = 22;
+const int FACTORY_BTN_PIN = 12;
 const uint32_t BTN_DEBOUNCE_MS = 50;
 
 const uint32_t FACTORY_HOLD_MS = 10000;
 
-const int CONFIG_MODE_PIN = 25;
+const int CONFIG_MODE_PIN = 14;
 const int POWER_RUN_PIN = 26;
 const int TX_LED_PIN = 32;
 const int RX_LED_PIN = 33;
@@ -59,11 +60,18 @@ PubSubClient mqtt;
 const uint16_t MQTT_BUF_SZ = 2200;
 
 const char* DISCOVERY_PREFIX = "homeassistant";
-const char* BASE_TOPIC       = "orisec";
-const char* AVAIL_TOPIC      = "orisec/status";
 
-const char* CMD_RELEARN_TOPIC = "orisec/cmd/relearn";
-const char* CMD_RESTART_TOPIC = "orisec/cmd/restart";
+String BASE_TOPIC;
+String AVAIL_TOPIC;
+String CMD_RELEARN_TOPIC;
+String CMD_RESTART_TOPIC;
+
+void initTopics() {
+  BASE_TOPIC        = settings.deviceId;
+  AVAIL_TOPIC       = settings.deviceId + "/status";
+  CMD_RELEARN_TOPIC = settings.deviceId + "/cmd/relearn";
+  CMD_RESTART_TOPIC = settings.deviceId + "/cmd/restart";
+}
 
 // Status LEDs
 volatile bool factoryResetActive = false;

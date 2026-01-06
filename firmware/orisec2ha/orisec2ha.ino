@@ -31,10 +31,28 @@ void setup() {
   DBGLN(String("Setup AP PASS: ") + apPassword);
 
   loadSettings();
+  initTopics();
+  initTables();
+
+  if (digitalRead(CONFIG_BTN_PIN) == LOW) {
+    DBGLN("Config Button Pushed During Boot");
+    digitalWrite(CONFIG_MODE_PIN, HIGH);
+    delay(5000);
+    digitalWrite(CONFIG_MODE_PIN, LOW);
+    delay(500);
+    if (digitalRead(CONFIG_BTN_PIN) == LOW) {
+      DBGLN("Config Button Held During Boot");
+      digitalWrite(TX_LED_PIN, HIGH);
+      digitalWrite(RX_LED_PIN, HIGH);
+      digitalWrite(CONFIG_MODE_PIN, HIGH);
+      digitalWrite(POWER_RUN_PIN, HIGH);
+      factoryReset();
+    } else {
+      startConfigPortal();
+    }
+  }
 
   panelSerial.begin(PANEL_BAUD, SERIAL_8N1, PANEL_RX_PIN, PANEL_TX_PIN);
-
-  initTables();
 
   if (settings.enableIdeOta) setupArduinoIdeOta();
 
@@ -51,8 +69,6 @@ void setup() {
 }
 
 void loop() {
-  factoryButtonLoop();
-
   if (configButtonPressedEvent()) startConfigPortal();
 
   if (configModeActive) {

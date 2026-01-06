@@ -113,7 +113,6 @@ bool saveSettings(const Settings& s) {
 
 void factoryReset() {
   DBGLN("FACTORY RESET: deleting config and rebooting...");
-  setFactoryResetActive(true);
   if (LittleFS.begin()) {
     if (LittleFS.exists(CFG_FILE)) LittleFS.remove(CFG_FILE);
   }
