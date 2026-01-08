@@ -1,0 +1,8 @@
+﻿Part,Manufacturer,Part Number,Quantity,Price ($),Footprint (mm²),Description
+Rfbt,Vishay-Dale,CRCW040233K2FKED,1,0.01,3,Resistance: 33.2 kΩ  Tolerance: 1.0%  Power: 63 mW  
+Cout,MuRata,GRM188R60J226MEA0D,3,0.04,4.68,Cap: 22 µF  Total Derated Cap: 24 µF  VDC: 6.3 V  ESR: 1 mΩ  Package: 0603  
+L1,TDK,VLP8040T-2R2N,1,0.22,113.42,L: 2.2 µH  DCR: 15 mΩ  IDC: 6.7 A  
+Rfbb,Yageo,RC0201FR-0710KL,1,0.01,2.08,Resistance: 10 kΩ  Tolerance: 1.0%  Power: 50 mW  
+Cin,Taiyo Yuden,MSAST219LB5106KTNA01,2,0.09498,6.75,Cap: 10 µF  Total Derated Cap: 3.2 µF  VDC: 25 V  ESR: 5.85 mΩ  Package: 0805  
+U1,Texas Instruments,TPS563200DDCR,1,0.342,14.82,
+Cbst,AVX,08053C104KAT2A,1,0.01,6.75,Cap: 100 nF  Total Derated Cap: 100 nF  VDC: 25 V  ESR: 280 mΩ  Package: 0805  
